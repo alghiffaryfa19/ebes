@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Status Pencairan Dana</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #fff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
+    --red: #dc2626; --red-bg: #fef2f2; --green: #16a34a; --green-bg: #f0fdf4;
+    --amber: #d97706; --amber-bg: #fffbeb; --accent: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  header { background: linear-gradient(120deg, #1e3a8a, #2563eb); color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header .sub { opacity: .85; font-size: 12px; margin-top: 4px; }
+  .upload-btn { background: rgba(255,255,255,.15); color: #fff; border: 1px dashed rgba(255,255,255,.5); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; transition: background .2s; }
+  .upload-btn:hover { background: rgba(255,255,255,.25); }
+  main { padding: 18px 24px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .stat .n { font-size: 22px; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff; }
+  .toolbar input { min-width: 260px; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar button { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
+  .toolbar button:hover { background: #f9fafb; }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; align-items: center; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: auto; max-height: calc(100vh - 260px); }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; }
+  th, td { border-bottom: 1px solid var(--border); padding: 8px 10px; vertical-align: top; text-align: left; }
+  thead th { position: sticky; top: 0; background: #f9fafb; z-index: 2; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: #374151; white-space: nowrap; }
+  th.name, td.name { position: sticky; left: 0; background: #fff; z-index: 1; min-width: 240px; border-right: 1px solid var(--border); }
+  thead th.name { z-index: 3; background: #f9fafb; }
+  td.name .n { font-weight: 600; }
+  td.name .u { color: var(--muted); font-size: 12px; }
+  td.name .src { display: inline-block; margin-top: 3px; font-size: 10px; color: #4b5563; background: #eef2ff; border-radius: 4px; padding: 1px 5px; }
+  tbody tr:hover td { background: #f8fafc; }
+  td.cell { min-width: 175px; }
+  .chip { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .chip:hover { border-color: var(--border); }
+  .chip.rej { background: var(--red-bg); }
+  .chip.ok { background: var(--green-bg); }
+  .chip.wait { background: var(--amber-bg); }
+  .chip svg { flex: none; width: 22px; height: 22px; }
+  .chip .t { font-weight: 600; font-size: 12px; line-height: 1.25; }
+  .chip.rej .t { color: var(--red); } .chip.ok .t { color: var(--green); } .chip.wait .t { color: var(--amber); }
+  .chip .d { font-size: 11px; color: var(--muted); }
+  .chip .h { font-size: 10px; color: #9ca3af; }
+  .empty { color: #d1d5db; text-align: center; }
+  .banner { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: none; }
+  .banner.err { background: var(--red-bg); color: var(--red); display: block; }
+  .toast { position: fixed; bottom: 18px; right: 18px; background: #111827; color: #fff; padding: 10px 14px; border-radius: 8px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
+  .toast.show { opacity: .92; }
+  body.dragover::after { content: "Lepaskan file .xlsx di sini untuk memuat data"; position: fixed; inset: 0; background: rgba(37,99,235,.85); color: #fff; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; z-index: 100; }
+  dialog { border: none; border-radius: 14px; padding: 0; width: min(760px, 94vw); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(15,23,42,.45); }
+  .dlg-h { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .dlg-h h3 { margin: 0; font-size: 16px; }
+  .dlg-b { padding: 14px 18px; max-height: 70vh; overflow: auto; }
+  .dlg-b .rec { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .dlg-b .rec.latest { border-color: var(--accent); box-shadow: 0 0 0 2px #dbeafe; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 3px 10px; font-size: 13px; }
+  .kv b { color: var(--muted); font-weight: 500; }
+  .x { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); }
+  .badge { font-size: 10px; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Dashboard Status Pencairan Dana</h1>
+    <div class="sub" id="sub">Memuat data dari file .xlsx…</div>
+  </div>
+  <label class="upload-btn" title="Anda juga bisa drag & drop file .xlsx langsung ke halaman ini">
+    📂 Buka / Tambah File .xlsx Lokal
+    <input id="file-input" type="file" accept=".xlsx" multiple hidden>
+  </label>
+</header>
+<main>
+  <div id="banner" class="banner"></div>
+  <div class="stats" id="stats"></div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Cari nama / universitas / kode registrasi…">
+    <select id="src"><option value="">Semua file</option></select>
+    <select id="flt">
+      <option value="">Semua status</option>
+      <option value="rej">Ada yang Ditolak</option>
+      <option value="wait">Ada yang Dalam Proses</option>
+      <option value="ok">Semua Diproses oleh Bank</option>
+    </select>
+    <div class="spacer"></div>
+    <div class="legend">
+      <span><span id="lg-ok"></span> Diproses oleh Bank</span>
+      <span><span id="lg-rej"></span> Ditolak</span>
+      <span><span id="lg-wait"></span> Dalam proses</span>
+    </div>
+    <button id="reload" title="Muat ulang dari xlsx">⟳ Muat ulang</button>
+  </div>
+  <div class="wrap"><table id="tbl"></table></div>
+</main>
+<dialog id="dlg"><div class="dlg-h"><h3 id="dlg-t"></h3><button class="x" onclick="dlg.close()">×</button></div><div class="dlg-b" id="dlg-b"></div></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const ICONS = {
+  ok: `<svg viewBox="0 0 24 24" fill="none"><rect x="1.5" y="5" width="21" height="14" rx="2.5" fill="#16a34a"/><circle cx="12" cy="12" r="4.3" fill="#fff"/><path d="M9.8 12.1l1.5 1.5 3-3.1" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="12" r="1" fill="#bbf7d0"/><circle cx="19" cy="12" r="1" fill="#bbf7d0"/></svg>`,
+  rej: `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.5" fill="#dc2626"/><path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  wait: `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.5" fill="#f59e0b"/><path d="M8.5 6.5h7M8.5 17.5h7M9.3 6.5c0 3 5.4 3.4 5.4 5.5s-5.4 2.5-5.4 5.5M14.7 6.5c0 3-5.4 3.4-5.4 5.5s5.4 2.5 5.4 5.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M10.5 16.6h3l-1.5-1.6z" fill="#fff"/></svg>`,
+};
+const kind = (s) => { s = (s || '').toLowerCase().trim(); return s === 'ditolak' ? 'rej' : s === 'diproses oleh bank' ? 'ok' : 'wait'; };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const rupiah = (v) => v === '' || v == null || isNaN(+v) ? '-' : 'Rp ' + (+v).toLocaleString('id-ID');
+const $ = (id) => document.getElementById(id);
+['ok', 'rej', 'wait'].forEach((k) => $('lg-' + k).innerHTML = ICONS[k].replace('<svg', '<svg width="16" height="16" style="vertical-align:middle"'));
+
+let DATA = null, VERSION = null, MODE = null; // MODE: 'api' | 'static'
+
+// ======================== NATIVE BROWSER XLSX PARSER ========================
+async function inflateRaw(u8) {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(u8);
+  writer.close();
+  const buf = await new Response(ds.readable).arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+async function unzipBuffer(arrayBuffer) {
+  const dv = new DataView(arrayBuffer);
+  const u8 = new Uint8Array(arrayBuffer);
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Bukan file ZIP/XLSX yang valid');
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const files = {};
+  const dec = new TextDecoder('utf-8');
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true);
+    const elen = dv.getUint16(p + 30, true);
+    const clen = dv.getUint16(p + 32, true);
+    const off = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + elen + clen;
+    const lnlen = dv.getUint16(off + 26, true);
+    const lelen = dv.getUint16(off + 28, true);
+    const start = off + 30 + lnlen + lelen;
+    const slice = u8.subarray(start, start + csize);
+    files[name] = async () => dec.decode(method === 0 ? slice : await inflateRaw(slice));
+  }
+  return files;
+}
+
+function xmlDecode(s) {
+  return s
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
+    .replace(/&amp;/g, '&');
+}
+
+const stripNs = (xml) => xml.replace(/<(\/?)[A-Za-z0-9_]+:/g, '<$1');
+function textOf(fragment) {
+  let out = '', m;
+  const re = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g;
+  while ((m = re.exec(fragment))) out += xmlDecode(m[1]);
+  return out;
+}
+function colIndex(ref) {
+  const letters = ref.replace(/\d+/g, '');
+  let n = 0;
+  for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+async function parseXlsxBuffer(arrayBuffer) {
+  const files = await unzipBuffer(arrayBuffer);
+  const get = async (name) => (files[name] ? stripNs(await files[name]()) : null);
+  const shared = [];
+  const ss = await get('xl/sharedStrings.xml');
+  if (ss) {
+    const re = /<si>([\s\S]*?)<\/si>/g;
+    let m;
+    while ((m = re.exec(ss))) shared.push(textOf(m[1]));
+  }
+  let sheetPath = 'xl/worksheets/sheet1.xml';
+  if (!files[sheetPath]) sheetPath = Object.keys(files).find((f) => /^xl\/worksheets\/[^/]+\.xml$/.test(f));
+  const xml = await get(sheetPath);
+  if (!xml) throw new Error('Sheet tidak ditemukan');
+
+  const rows = [];
+  const rowRe = /<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g;
+  let rm;
+  while ((rm = rowRe.exec(xml))) {
+    const row = [];
+    const body = rm[1] || '';
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm, idx = 0;
+    while ((cm = cellRe.exec(body))) {
+      const attrs = cm[1], inner = cm[2] || '';
+      const r = /\br="([A-Z]+\d+)"/.exec(attrs);
+      if (r) idx = colIndex(r[1]);
+      const t = (/\bt="([^"]+)"/.exec(attrs) || [])[1];
+      let v = '';
+      if (t === 'inlineStr') v = textOf(inner);
+      else {
+        const vm = /<v>([\s\S]*?)<\/v>/.exec(inner);
+        v = vm ? xmlDecode(vm[1]) : '';
+        if (t === 's') v = shared[+v] ?? '';
+      }
+      row[idx] = v;
+      idx++;
+    }
+    rows.push(row);
+  }
+  if (!rows.length) return [];
+  const header = rows[0].map((h) => (h || '').trim());
+  return rows.slice(1).filter((r) => r.some((c) => c !== undefined && c !== '')).map((r) => {
+    const o = {};
+    header.forEach((h, i) => { if (h) o[h] = r[i] ?? ''; });
+    return o;
+  });
+}
+
+function parseDate(s) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2})[.:](\d{1,2})(?:[.:](\d{1,2}))?)?/.exec((s || '').trim());
+  if (!m) return 0;
+  return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)).getTime();
+}
+
+const FIELDS = ['Id', 'Nama', 'KodeRegistrasi', 'Universitas', 'CostItem', 'CostItemId', 'TglPengajuan',
+  'Status', 'IdStatus', 'RequestDetail', 'RequestAmountIDR', 'ApprovedAmount', 'ApprovedDate',
+  'Verifikator', 'Catatan', 'NoSPP', 'PICAssignEmail', 'AwalPeriode', 'AkhirPeriode'];
+
+function aggregateDatasets(datasets, errors = []) {
+  const groups = new Map(), costItems = new Map(), people = new Map();
+  const files = [];
+  for (const ds of datasets) {
+    files.push({ file: ds.name, mtime: ds.mtime || Date.now(), size: ds.size || 0 });
+    for (const r of ds.rows) {
+      const nama = (r.Nama || '').trim(), ci = (r.CostItem || '').trim();
+      if (!nama || !ci) continue;
+      const rec = { source: ds.name, ts: parseDate(r.TglPengajuan) };
+      for (const k of FIELDS) rec[k] = r[k] ?? '';
+      const key = nama.toUpperCase() + '|' + ci;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(rec);
+      if (!costItems.has(ci)) costItems.set(ci, +r.CostItemId || 999);
+      const pk = nama.toUpperCase();
+      if (!people.has(pk)) people.set(pk, { nama, universitas: r.Universitas || '', kode: r.KodeRegistrasi || '', sources: new Set() });
+      people.get(pk).sources.add(ds.name);
+    }
+  }
+  const rows = {};
+  for (const [key, list] of groups) {
+    list.sort((a, b) => b.ts - a.ts);
+    const [pk, ci] = [key.slice(0, key.indexOf('|')), key.slice(key.indexOf('|') + 1)];
+    if (!rows[pk]) rows[pk] = {};
+    rows[pk][ci] = { latest: list[0], history: list };
+  }
+  return {
+    generatedAt: Date.now(),
+    files,
+    errors,
+    version: JSON.stringify(files),
+    costItems: [...costItems.entries()].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0])).map((e) => e[0]),
+    people: [...people.entries()]
+      .map(([pk, p]) => ({ key: pk, nama: p.nama, universitas: p.universitas, kode: p.kode, sources: [...p.sources], items: rows[pk] || {} }))
+      .sort((a, b) => a.nama.localeCompare(b.nama)),
+  };
+}
+
+// Otomatis mendeteksi daftar file .xlsx di GitHub Pages / Static Hosting
+async function discoverStaticXlsxFiles() {
+  const found = new Map(); // name -> { url, sha }
+  // 1. Jika di-host di *.github.io, gunakan GitHub Contents API agar otomatis tahu semua file .xlsx di root repo
+  const ghMatch = /^([^.]+)\.github\.io$/i.exec(location.hostname);
+  if (ghMatch) {
+    const owner = ghMatch[1];
+    const repo = location.pathname.split('/').filter(Boolean)[0];
+    if (repo) {
+      try {
+        const apiRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`, { cache: 'no-store' });
+        if (apiRes.ok) {
+          const items = await apiRes.json();
+          if (Array.isArray(items)) {
+            items.filter((x) => x.type === 'file' && /\.xlsx$/i.test(x.name) && !x.name.startsWith('~$'))
+              .forEach((x) => found.set(x.name, { url: `./${encodeURIComponent(x.name)}`, sha: x.sha, size: x.size }));
+          }
+        }
+      } catch {}
+    }
+  }
+  // 2. Baca juga files.json (manifest fallback atau custom hosting seperti Vercel/Netlify/Cloudflare Pages)
+  if (!found.size) {
+    try {
+      const mRes = await fetch(`./files.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (mRes.ok) {
+        const list = await mRes.json();
+        (Array.isArray(list) ? list : (list.files || [])).forEach((f) => {
+          const name = typeof f === 'string' ? f : f.file;
+          if (name && /\.xlsx$/i.test(name)) found.set(name, { url: `./${encodeURIComponent(name)}` });
+        });
+      }
+    } catch {}
+  }
+  return [...found.entries()].map(([name, info]) => ({ name, ...info }));
+}
+
+let customDatasets = []; // Dari drag & drop / file picker lokal
+
+async function loadStaticMode() {
+  const discovered = await discoverStaticXlsxFiles();
+  const datasets = [...customDatasets];
+  const errors = [];
+  for (const f of discovered) {
+    if (datasets.some((d) => d.name === f.name)) continue;
+    try {
+      const res = await fetch(`${f.url}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const lm = res.headers.get('last-modified');
+      const buf = await res.arrayBuffer();
+      const rows = await parseXlsxBuffer(buf);
+      datasets.push({ name: f.name, rows, mtime: lm ? Date.parse(lm) : Date.now(), size: buf.byteLength, sha: f.sha });
+    } catch (e) {
+      errors.push(`${f.name}: ${e.message}`);
+    }
+  }
+  return aggregateDatasets(datasets, errors);
+}
+
+// ======================== UI RENDERING ========================
+function render() {
+  if (!DATA) return;
+  const q = $('q').value.trim().toLowerCase();
+  const src = $('src').value, flt = $('flt').value;
+  const cis = DATA.costItems;
+  const people = DATA.people.filter((p) => {
+    if (src && !p.sources.includes(src)) return false;
+    if (q && !(p.nama + ' ' + p.universitas + ' ' + p.kode).toLowerCase().includes(q)) return false;
+    const ks = Object.values(p.items).map((c) => kind(c.latest.Status));
+    if (flt === 'rej' && !ks.includes('rej')) return false;
+    if (flt === 'wait' && !ks.includes('wait')) return false;
+    if (flt === 'ok' && !(ks.length && ks.every((k) => k === 'ok'))) return false;
+    return true;
+  });
+
+  const cnt = { ok: 0, rej: 0, wait: 0 };
+  people.forEach((p) => Object.values(p.items).forEach((c) => cnt[kind(c.latest.Status)]++));
+  $('stats').innerHTML = `
+    <div class="stat"><div style="font-size:24px">👥</div><div><div class="n">${people.length}</div><div class="l">Penerima</div></div></div>
+    <div class="stat">${ICONS.ok.replace('<svg', '<svg width="30" height="30"')}<div><div class="n" style="color:var(--green)">${cnt.ok}</div><div class="l">Diproses oleh Bank</div></div></div>
+    <div class="stat">${ICONS.wait.replace('<svg', '<svg width="30" height="30"')}<div><div class="n" style="color:var(--amber)">${cnt.wait}</div><div class="l">Dalam proses</div></div></div>
+    <div class="stat">${ICONS.rej.replace('<svg', '<svg width="30" height="30"')}<div><div class="n" style="color:var(--red)">${cnt.rej}</div><div class="l">Ditolak</div></div></div>`;
+
+  let h = `<thead><tr><th class="name">Nama</th>${cis.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>`;
+  for (const p of people) {
+    h += `<tr><td class="name"><div class="n">${esc(p.nama)}</div><div class="u">${esc(p.universitas)}</div>${p.sources.map((s) => `<span class="src">${esc(s.replace(/\.xlsx$/i, ''))}</span>`).join(' ')}</td>`;
+    for (const ci of cis) {
+      const c = p.items[ci];
+      if (!c) { h += `<td class="cell empty">—</td>`; continue; }
+      const r = c.latest, k = kind(r.Status);
+      h += `<td class="cell"><div class="chip ${k}" data-p="${esc(p.key)}" data-c="${esc(ci)}" title="${esc(r.Catatan || r.Status)}">
+        ${ICONS[k]}<div><div class="t">${esc(r.Status || '-')}</div>
+        <div class="d">${esc(r.TglPengajuan)}</div>
+        <div class="d">${rupiah(r.RequestAmountIDR)}</div>
+        ${r.Catatan ? `<div class="d" style="color:var(--text);margin-top:2px;font-style:italic">${esc(r.Catatan.length > 55 ? r.Catatan.slice(0, 55) + '…' : r.Catatan)}</div>` : (k === 'wait' && r.RequestDetail ? `<div class="d" style="color:var(--text);margin-top:2px">${esc(r.RequestDetail)}</div>` : '')}
+        ${c.history.length > 1 ? `<div class="h">${c.history.length}× pengajuan</div>` : ''}</div></div></td>`;
+    }
+    h += '</tr>';
+  }
+  if (!people.length) h += `<tr><td colspan="${cis.length + 1}" class="empty" style="padding:30px">Tidak ada data</td></tr>`;
+  $('tbl').innerHTML = h + '</tbody>';
+}
+
+function openDetail(pk, ci) {
+  const p = DATA.people.find((x) => x.key === pk); const c = p.items[ci];
+  $('dlg-t').textContent = `${p.nama} — ${ci}`;
+  $('dlg-b').innerHTML = c.history.map((r, i) => {
+    const k = kind(r.Status);
+    return `<div class="rec ${i === 0 ? 'latest' : ''}">
+      <div class="chip ${k}" style="cursor:default;margin-bottom:8px">${ICONS[k]}<div class="t" style="align-self:center">${esc(r.Status)}${i === 0 ? '<span class="badge">TERBARU</span>' : ''}</div></div>
+      <div class="kv">
+        <b>ID Pengajuan</b><span>${esc(r.Id)}</span>
+        <b>Tgl Pengajuan</b><span>${esc(r.TglPengajuan)}</span>
+        <b>Detail</b><span>${esc(r.RequestDetail)}</span>
+        <b>Nominal Diajukan</b><span>${rupiah(r.RequestAmountIDR)}</span>
+        <b>Nominal Disetujui</b><span>${rupiah(r.ApprovedAmount)}</span>
+        <b>Tgl Diproses</b><span>${esc(r.ApprovedDate || '-')}</span>
+        <b>Periode</b><span>${esc(r.AwalPeriode)} s/d ${esc(r.AkhirPeriode)}</span>
+        ${r.NoSPP ? `<b>No SPP</b><span>${esc(r.NoSPP)}</span>` : ''}
+        <b>Verifikator</b><span>${esc(r.Verifikator || '-')}</span>
+        <b>Catatan</b><span>${esc(r.Catatan || '-')}</span>
+        <b>Sumber</b><span>${esc(r.source)}</span>
+      </div></div>`;
+  }).join('');
+  $('dlg').showModal();
+}
+
+$('tbl').addEventListener('click', (e) => { const ch = e.target.closest('.chip[data-p]'); if (ch) openDetail(ch.dataset.p, ch.dataset.c); });
+['q', 'src', 'flt'].forEach((id) => $(id).addEventListener('input', render));
+$('reload').onclick = () => load(true);
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); }
+
+function applyPayload(d, manual) {
+  const changed = VERSION && VERSION !== d.version;
+  DATA = d; VERSION = d.version;
+  const sel = $('src'), cur = sel.value;
+  sel.innerHTML = '<option value="">Semua file</option>' + d.files.map((f) => `<option value="${esc(f.file)}">${esc(f.file)}</option>`).join('');
+  sel.value = d.files.some((f) => f.file === cur) ? cur : '';
+  $('sub').textContent = `${d.files.length} file: ${d.files.map((f) => f.file).join(' • ')} — dimuat ${new Date().toLocaleTimeString('id-ID')}`;
+  const b = $('banner');
+  if (d.errors && d.errors.length) { b.className = 'banner err'; b.textContent = 'Peringatan: ' + d.errors.join('; '); } else b.className = 'banner';
+  render();
+  if (changed) toast('File xlsx berubah — data diperbarui');
+  else if (manual) toast('Data dimuat ulang dari xlsx');
+}
+
+async function load(manual) {
+  try {
+    if (MODE !== 'static' && !customDatasets.length) {
+      try {
+        const res = await fetch('/api/data', { cache: 'no-store' });
+        if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) {
+          const d = await res.json();
+          if (!d.error) { MODE = 'api'; applyPayload(d, manual); return; }
+        }
+      } catch {}
+    }
+    MODE = 'static';
+    const d = await loadStaticMode();
+    applyPayload(d, manual);
+  } catch (e) {
+    $('banner').className = 'banner err'; $('banner').textContent = 'Error: ' + e.message;
+  }
+}
+
+// Drag & Drop atau pilih file .xlsx langsung di browser
+async function handleLocalFiles(fileList) {
+  for (const file of fileList) {
+    if (!/\.xlsx$/i.test(file.name)) continue;
+    const buf = await file.arrayBuffer();
+    const rows = await parseXlsxBuffer(buf);
+    customDatasets = customDatasets.filter((d) => d.name !== file.name);
+    customDatasets.push({ name: file.name, rows, mtime: file.lastModified, size: file.size });
+  }
+  MODE = 'static';
+  await load(true);
+  toast(`${fileList.length} file .xlsx berhasil dimuat`);
+}
+
+$('file-input').addEventListener('change', (e) => { if (e.target.files.length) handleLocalFiles(e.target.files); });
+window.addEventListener('dragover', (e) => { e.preventDefault(); document.body.classList.add('dragover'); });
+window.addEventListener('dragleave', (e) => { if (e.target === document.body || e.clientX <= 0) document.body.classList.remove('dragover'); });
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dragover');
+  if (e.dataTransfer?.files?.length) handleLocalFiles(e.dataTransfer.files);
+});
+
+// Cek perubahan file setiap 5 detik bila menggunakan server Node.js lokal
+setInterval(async () => {
+  if (MODE !== 'api') return;
+  try { const v = (await (await fetch('/api/version', { cache: 'no-store' })).json()).version; if (v !== VERSION) load(); } catch {}
+}, 5000);
+
+load();
+</script>
+</body>
+</html>
